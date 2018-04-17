@@ -1,4 +1,4 @@
-function [output] = tdt2mat2py2(tank, rat, session, sigs, ttls, savefilename)
+function [output] = tdt2mat2py2(tank, rat, session, sigs, ttls, savefolder)
 
 % clear all; close all 
 % rat = 'thph2.2';
@@ -12,6 +12,9 @@ function [output] = tdt2mat2py2(tank, rat, session, sigs, ttls, savefilename)
 %% Extracts photometry data and fits signal FROM MULTIPLE BOXES (if there are multiple)
 % Reads in TDT data into structured array using TDT function
 fileinfo = strcat({'Rat '},rat,{': Session '}, session);
+
+
+
 data = TDTbin2mat(tank);
 
 %% Puts info into output file
@@ -19,7 +22,7 @@ output.info = data.info
 
 % Assigns processed data to new variables for easier referencing
 output.blue = data.streams.(char(sigs{1})).data';
-output.uv = data.streams.(char(sigs{2})).data';
+output.uv = data.streams.(char(sigs{2}).data';
 output.fs = data.streams.(char(sigs{1})).fs;
     
 %% Gets TTLs
@@ -29,10 +32,12 @@ output.fs = data.streams.(char(sigs{1})).fs;
 output.tick = data.epocs.Tick
 
 for x = 1:size(ttls,2)
-    output.(char(ttls{x})) = data.epocs.(char(ttls{x}))
-end
-
-
-%% Save file with appropriate name
-
-save(savefilename, 'output');
+    output.(char(ttls{x}) = 
+            ttls{x} = C{1,ttl_cols(x)}(i)
+        end
+output.licks = data.epocs.(licksName)
+% 
+% %% Save file with appropriate name
+% 
+% savefilename = strcat(savefolder,rat,session,'.mat');
+% save(savefilename, 'output');

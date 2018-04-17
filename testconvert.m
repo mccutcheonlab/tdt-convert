@@ -5,8 +5,8 @@
 [folder, name, ext] = fileparts(which(mfilename('fullpath')));
 
 metafile = strcat(folder, '\test_metafile_2boxes.csv');
-tankfolder = 'R:\DA_and_Reward\Shared\Scripts\THPH Tanks\';
-savefolder = 'R:\DA_and_Reward\Shared\Scripts\Matlab Files\test_output\';
+tankfolder = 'C:\Users\James Rig\Documents\Test data\';
+savefolder = 'C:\Users\James Rig\Documents\Test data\';
 
 txtfileformat = '%s %s %s %d %s %d %d %d %d %f %s %s %s %s %s %s %s %d';
 

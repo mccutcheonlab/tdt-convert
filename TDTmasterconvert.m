@@ -93,15 +93,13 @@ for i = 1:size(C{1,1},1)
         savefilename = char(strcat(savefolder,rat,'_',session,'.mat'))
         
         if skipfiles == 0
-            tdt2mat2py2(TDTfile,rat,session,sigs,ttls,savefolder)
+            tdt2mat2py2(TDTfile,rat,session,sigs,ttls,savefilename)
         else
             if exist(savefilename) == 0
                 msgbox(savefilename)
-                tdt2mat2py2(TDTfile,rat,session,sigs,ttls,savefolder)
+                tdt2mat2py2(TDTfile,rat,session,sigs,ttls,savefilename)
             end
         end
     end
 end
 
-
-msgbox('Hey hey')

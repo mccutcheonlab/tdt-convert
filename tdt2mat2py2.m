@@ -1,4 +1,4 @@
-function [output] = tdt2mat2py(tank, rat, session, sigs, ttls, savefolder)
+function [output] = tdt2mat2py2(tank, rat, session, sigs, ttls, savefolder)
 
 % clear all; close all 
 % rat = 'thph2.2';

@@ -12,23 +12,23 @@
 % 
 % ttls = {
     
-[folder, name, ext] = fileparts(which(mfilename('fullpath')));
+% [folder, name, ext] = fileparts(which(mfilename('fullpath')));
+% 
+% metafile = strcat(folder, '\test_metafile_2boxes.csv');
+% xlsfile = strcat(folder, '\test_metafile_2boxes');
+% 
+% fid = fopen(metafile);
+% 
+% header = strsplit(fgetl(fid), ',')
+% 
+% sig_index = strfind(header, 'sig');
+% sig_cols = find(not(cellfun('isempty', sig_index)))
+% 
+% ttl_index = strfind(header, 'ttl');
+% ttl_cols = find(not(cellfun('isempty', ttl_index)))
 
-metafile = strcat(folder, '\test_metafile_2boxes.csv');
-xlsfile = strcat(folder, '\test_metafile_2boxes');
 
-fid = fopen(metafile);
-
-header = strsplit(fgetl(fid), ',')
-
-sig_index = strfind(header, 'sig');
-sig_cols = find(not(cellfun('isempty', sig_index)))
-
-ttl_index = strfind(header, 'ttl');
-ttl_cols = find(not(cellfun('isempty', ttl_index)))
-
-
-
+import C:\Users\James Rig\Documents\GitHub\tdt-convert\tdt2mat2py.*
 
 
 % tmp1 = textscan(fid, '%s', 'delimiter', ' ', 'MultipleDelimsAsOne', 1)

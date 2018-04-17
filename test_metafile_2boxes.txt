@@ -1,0 +1,5 @@
+tdtfile	medfile	rat	date	session	include	licks	totdistractors	distracted	percentdistracted	blue	uv	tick	licks	distractors	distracted	note	endcol
+Kate-170810-072909	!2017-08-10_07h14m.Subject THPH2.1	thph2.1	170810	distraction	1	3257	57	45	78.9	Dv1B	Dv2B	Tick	LiA_	Did_	Dis_		1
+Kate-170810-072909	!2017-08-10_07h14m.Subject THPH2.2	thph2.2	170810	distraction	1	2784	73	8	11.0	Dv3B	Dv4B	Tick	La2_	Di2_	Do2_		1
+Kate-170811-104358	!2017-08-11_10h38m.Subject THPH2.7	thph2.7	170811	lick5	0	2021	0	0	0.0	Dv1B	Dv2B	Tick	LiA_	na	na		1
+Kate-170811-104358	!2017-08-11_10h38m.Subject THPH2.8	thph2.8	170811	lick5	0	140	0	0	0.0	Dv3B	Dv4B	Tick	La2_	na	na		1

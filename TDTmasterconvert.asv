@@ -40,13 +40,26 @@ end
 % Open metafile
 try
     fid = fopen(metafile);
-    C = textscan(fid, txtfileformat,'Delimiter','\t','HeaderLines',1);
+    header = strsplit(fgetl(fid), ',')
+    C = textscan(fid, txtfileformat,'Delimiter','\t','HeaderLines',0);
     fclose(fid);
 
     ncols = size(C,2);
     nrows = size(C{1},1);
     
     sprintf('Input file detected with %d columns and  %d rows.', ncols, nrows)
+
+    sig_index = strfind(header, 'sig');
+    sig_cols = find(not(cellfun('isempty', sig_index)))
+
+    ttl_index = strfind(header, 'ttl');
+    ttl_cols = find(not(cellfun('isempty', ttl_index)))
+    
+    rat_index = strfind(header, 'rat');
+    rat_col = find(not(cellfun('isempty', rat_index)))
+    
+    session_index = strfind(header, 'session');
+    session_col = find(not(cellfun('isempty', rat_index)))
 catch
     msgbox('Metafile could not be read.')
     return
@@ -71,11 +84,14 @@ for i = 1:size(C{1,1},1)
             session = strcat('s',num2str(C{1,5}(i)));
         end
         
+        savefilename = char(strcat(savefolder,rat,'_',session,'.mat'))
+        
         if skipfiles == 0
             tdt2mat2py(TDTfile,rat,session,0,savefolder)
         else
-            if exist(strcat(savefolder,rat,session,'.mat')) == 0
-                tdt2mat2py(TDTfile,rat,session,0,savefolder)
+            if exist(savefilename) == 0
+                msgbox(savefilename)
+%                 tdt2mat2py(TDTfile,rat,session,0,savefolder)
             end
         end
     end

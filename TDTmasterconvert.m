@@ -40,13 +40,27 @@ end
 % Open metafile
 try
     fid = fopen(metafile);
-    C = textscan(fid, txtfileformat,'Delimiter','\t','HeaderLines',1);
+    header = strsplit(fgetl(fid), ',')
+    C = textscan(fid, txtfileformat,'Delimiter',',','HeaderLines',0);
     fclose(fid);
 
     ncols = size(C,2);
     nrows = size(C{1},1);
     
     sprintf('Input file detected with %d columns and  %d rows.', ncols, nrows)
+
+    rat_index = strfind(header, 'rat');
+    rat_col = find(not(cellfun('isempty', rat_index)));
+    
+    session_index = strfind(header, 'session');
+    session_col = find(not(cellfun('isempty', session_index)));
+    
+    sig_index = strfind(header, 'sig');
+    sig_cols = find(not(cellfun('isempty', sig_index)));
+
+    ttl_index = strfind(header, 'ttl');
+    ttl_cols = find(not(cellfun('isempty', ttl_index)));
+    
 catch
     msgbox('Metafile could not be read.')
     return
@@ -63,24 +77,29 @@ for i = 1:size(C{1,1},1)
     if C{1,includecol}(i) == 1 % checks to see if Row is to be included or not
         TDTfile = char(strcat(tankfolder,C{1,1}(i)));
         
-        rat = strrep(char(C{1,3}(i)), '.', '-'); % Extracts rat and removes period
+        rat = strrep(char(C{1,rat_col}(i)), '.', '-'); % Extracts rat and removes period
         
-        if iscellstr(C{1,5}(i)) == 1
-            session = C{1,5}(i);
+        if iscellstr(C{1,session_col}(i)) == 1
+            session = C{1,session_col}(i);
         else
-            session = strcat('s',num2str(C{1,5}(i)));
+            session = strcat('s',num2str(C{1,session_col}(i)));
+        end
+        
+        sigs = {C{1,sig_cols(1)}(i) C{1,sig_cols(2)}(i)}
+        for x = 1:size(ttl_cols,2)
+            ttls{x} = C{1,ttl_cols(x)}(i)
         end
         
         savefilename = char(strcat(savefolder,rat,'_',session,'.mat'))
         
-        if skipfiles == 0
-            tdt2mat2py(TDTfile,rat,session,0,savefolder)
-        else
-            if exist(savefilename) == 0
-                msgbox(savefilename)
-%                 tdt2mat2py(TDTfile,rat,session,0,savefolder)
-            end
-        end
+%         if skipfiles == 0
+%             tdt2mat2py(TDTfile,rat,session,0,savefolder)
+%         else
+%             if exist(savefilename) == 0
+%                 msgbox(savefilename)
+% %                 tdt2mat2py(TDTfile,rat,session,0,savefolder)
+%             end
+%         end
     end
 end
 

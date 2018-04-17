@@ -4,10 +4,25 @@
 
 [folder, name, ext] = fileparts(which(mfilename('fullpath')));
 
-metafile = strcat(folder, '\test_metafile_2boxes.txt');
+metafile = strcat(folder, '\test_metafile_2boxes.csv');
 tankfolder = 'R:\DA_and_Reward\Shared\Scripts\THPH Tanks\';
 savefolder = 'R:\DA_and_Reward\Shared\Scripts\Matlab Files\test_output\';
 
 txtfileformat = '%s %s %s %d %s %d %d %d %d %f %s %s %s %s %s %s %s %d';
 
 TDTmasterconvert(metafile, tankfolder, savefolder, 1, 0, 2, txtfileformat, 6, 3, 5);
+
+
+%%%
+% for testing
+% tic
+% clear all; close all;
+% tank = 'R:\DA_and_Reward\Shared\Scripts\THPH Tanks\Kate-170810-072909'
+% data = TDTbin2mat(tank);
+% toc
+% 
+% tic
+% clear all; close all;
+% tank = 'C:\Users\James Rig\Documents\Test data\Kate-170810-072909'
+% data = TDTbin2mat(tank);
+% toc

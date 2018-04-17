@@ -1,65 +1,72 @@
 function [output] = tdt2mat2py(tank, rat, session, dataToOutput, savefolder)
 
-% dataToOutput = 0 to get raw signals (no suffix)
-% dataToOutput = 1 to get processed signals ("-p" suffix)
 
-% clear all; close all
-% 
-% rat = 'cas22';
-% session = 's1';
-% tank = 'D:\Photometry\MCH6\Jaime-170512-120654\';
-% process = true
+clear all; close all;
+% Options
+skipFiles = 1;
+processFiles = 0;
 
-tankfile = char(tank)
-
-%% Extracts photometry data and fits signal
-
-% Reads in TDT data into structured array using TDT function
-% fileinfo = strcat({'Rat '},num2str(rat),{': Session '},num2str(session));
-data = TDTbin2mat(tankfile);
-
-%% Puts info into output file
-output.info = data.info
-
-% Assigns processed data to new variables for easier referencing
-sigBlue = data.streams.Dv1A.data';
-sigUV = data.streams.Dv2A.data';
-output.fs = data.streams.Dv1A.fs;
-
-if dataToOutput == 1
-    range = (10000:length(sigBlue-10000)); %chooses range of photometry data to perform the fit over,
-    f = fittype('poly1'); % this chooses the fit model, use command cftool to open toobox and check goodness of fit
-    
-    fit1 = fit(sigBlue(range),sigUV(range),f,'Robust','on');
-    
-    % Subtracts UV signal from blue signal
-    output.result = fit1(sigBlue) - sigUV;
-    output.resultUV = sigUV
-else
-    output.result = sigBlue
-    output.resultUV = sigUV
-end
-    
-%% Gets TTLs
-% This short code ensures that illeagal characters, such as underscores,
-% aren't included
-
-epocs = fieldnames(data.epocs);
-for i = 1:length(epocs)
-    newName = epocs{i};
-    newName = newName(isstrprop(newName,'alphanum'));
-    output.(newName) = data.epocs.(epocs{i});
+% Checks to make sure user wants to overwrite
+if skipFiles == 1
+    prompt = 'Are you sure you want to overwrite old files? Y/N [Y]: ';
+    str = input(prompt,'s');
+    if isempty(str)
+        str = 'Y';
+    end
+    if str ~= 'Y'
+        msgbox('No problem. Exiting program.')
+        return
+    end
+elseif skipFiles ~= 1
+    msgbox('The value in skipFiles is not valid. Must be 0 or 1.')
+    return
 end
 
-%% Save file with appropriate name
-
-if dataToOutput == 1
-    savefilename = strcat(savefolder,rat,session,'-p.mat');
-else
-    savefilename = strcat(savefolder,rat,session,'.mat');
+% Checks that processFiles input is valid
+if processFiles ~= 0 & processFiles ~= 1
+    msgbox('The value in processFiles is not valid. Must be 0 or 1.')
+    return
 end
 
-save(savefilename, 'output');
+% Folder locations
+metafileFolder = 'C:\Users\James Rig\Dropbox\Python\photometry\';
+metafile = strcat(metafileFolder,'thph1-forMatPy.txt');
+dataFolder = 'R:\DA_and_Reward\kp259\THPH1\THPH1 Tanks\';
+saveFolder = 'C:\Users\James Rig\Dropbox\Python\matlab files\';
+
+% Open metafile
+fid = fopen(metafile);
+C = textscan(fid, '%s %s %s %d %f %d %s %s %s','Delimiter','\t','HeaderLines',1);
+fclose(fid);
+
+% Loop through rows in metafile
+for i = 1:size(C{1,1},1)
+    if C{1,6}(i) == 1 % checks to see if Row is to be included or not
+        TDTfile = char(strcat(dataFolder,C{1,1}(i)));
+        rat = char(C{1,3}(i));
+        session = strcat('s',num2str(C{1,5}(i)));
+        
+        if skipFiles == 0
+            if processFiles == 0
+                tdt2mat2py(TDTfile,rat,session,0,saveFolder)
+            else
+                tdt2mat2py(TDTfile,rat,session,1,saveFolder)
+            end
+            
+        else
+            if processFiles == 0
+                if exist(strcat(saveFolder,rat,session,'.mat')) == 0
+                    tdt2mat2py(TDTfile,rat,session,0,saveFolder)
+                end
+            else
+                if exist(strcat(saveFolder,rat,session,'-p.mat')) == 0
+                    tdt2mat2py(TDTfile,rat,session,1,saveFolder)
+                end
+            end                     
+        end
+    end
+end
+        
 
     
     

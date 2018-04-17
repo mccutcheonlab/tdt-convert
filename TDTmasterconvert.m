@@ -1,4 +1,6 @@
-function TDTmasterconvert(metafile, tankfolder, savefolder, skipfiles, processfiles, nboxes, includecol, txtfileformat)
+function TDTmasterconvert(metafile, tankfolder, savefolder,... 
+                            skipfiles, processfiles, nboxes,...
+                            txtfileformat, includecol, ratcol, sessioncol)
 
 % Checks to make sure user wants to overwrite and value in skipfiles is
 % valid
@@ -50,6 +52,37 @@ catch
     return
 end
 
+% Checks columns are OK
+if includecol > ncols | ratcol > ncols | sessioncol > ncols
+    msgbox('Check column inputs, not enough columns in metafile.')
+    return
+end
+
+% Loop through rows in metafile
+for i = 1:size(C{1,1},1)
+    if C{1,includecol}(i) == 1 % checks to see if Row is to be included or not
+        TDTfile = char(strcat(tankfolder,C{1,1}(i)));
+        
+        rat = strrep(char(C{1,3}(i)), '.', '-'); % Extracts rat and removes period
+        
+        if iscellstr(C{1,5}(i)) == 1
+            session = C{1,5}(i);
+        else
+            session = strcat('s',num2str(C{1,5}(i)));
+        end
+        
+        savefilename = char(strcat(savefolder,rat,'_',session,'.mat'))
+        
+        if skipfiles == 0
+            tdt2mat2py(TDTfile,rat,session,0,savefolder)
+        else
+            if exist(savefilename) == 0
+                msgbox(savefilename)
+%                 tdt2mat2py(TDTfile,rat,session,0,savefolder)
+            end
+        end
+    end
+end
 
 
 msgbox('Hey hey')

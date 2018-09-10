@@ -2,7 +2,7 @@ function TDTmasterconvert(metadata, tankfolder, savefolder,...
                             skipfiles, processfiles, nboxes)
 % Initialize log file
 
-logfile = strcat(tankfolder, 'conversion_log.txt');
+logfile = strcat(savefolder, 'conversion_log.txt');
 fid = fopen(logfile, 'w');
 fprintf(fid, '%s: %s\r\n', datestr(now, 0), 'Attempting to convert...');
 fclose(fid)
@@ -111,6 +111,8 @@ for i = 1:size(C,1)
             else
                 if exist(savefilename) == 0
                     tdt2mat2py2(TDTfile,rat,session,sigs,ttls,savefilename);
+                    msg = strcat('Rat ',rat,'_',session,' converted successfully (I think).')
+                    append2log(logfile, msg); 
                 else
                     msg = strcat('Skipping Rat ',rat,'_',session)
                     append2log(logfile, msg);

@@ -36,6 +36,7 @@ function data = TDTbin2mat(BLOCK_PATH, varargin)
 %      'NODATA'     boolean, only return timestamps, channels, and sort 
 %                       codes for snippets, no waveform data (default = false)
 %      'STORE'      string, specify a single store to extract
+%                   cell of strings, specify cell arrow of stores to extract
 %      'CHANNEL'    integer, choose a single channel, to extract from
 %                       stream or snippet events. Default is 0, to extract
 %                       all channels.
@@ -51,11 +52,21 @@ function data = TDTbin2mat(BLOCK_PATH, varargin)
 %                       heads = TDTbin2mat(BLOCK_PATH, 'HEADERS', 1);
 %                       data = TDTbin2mat(BLOCK_PATH, 'HEADERS', heads, 'TYPE', {'snips'});
 %                       data = TDTbin2mat(BLOCK_PATH, 'HEADERS', heads, 'TYPE', {'streams'});
+%      'COMBINE'    cell, specify one or more data stores that were saved 
+%                       by the Strobed Data Storage gizmo in Synapse (or an
+%                       Async_Stream_Store macro in OpenEx). By default,
+%                       the data is stored in small chunks while the strobe
+%                       is high. This setting allows you to combine these
+%                       small chunks back into the full waveforms that were
+%                       recorded while the strobe was enabled.
+%                   example:
+%                       data = TDTbin2mat(BLOCK_PATH, 'COMBINE', {'StS1'});
 %
 
 % defaults
 BITWISE  = '';
 CHANNEL  = 0;
+COMBINE  = {};
 HEADERS  = 0;
 NODATA   = false;
 RANGES   = [];
@@ -64,11 +75,16 @@ T1       = 0;
 T2       = 0;
 TYPE     = 1:5;
 VERBOSE  = 0;
-
 SORTNAME = 'TankSort';
+
+VALID_PARS = {'BITWISE','CHANNEL','HEADERS','NODATA','RANGES','STORE', ...
+    'T1','T2','TYPE','VERBOSE','SORTNAME','COMBINE'};
 
 % parse varargin
 for ii = 1:2:length(varargin)
+    if ~ismember(upper(varargin{ii}), VALID_PARS)
+        error('%s is not a valid parameter. See help TDTbin2mat.', upper(varargin{ii}));
+    end
     eval([upper(varargin{ii}) '=varargin{ii+1};']);
 end
 
@@ -157,7 +173,12 @@ end
 if ~useOutsideHeaders
     tsqList = dir([BLOCK_PATH '*.tsq']);
     if length(tsqList) < 1
-        error('no TSQ file found')
+        if ~exist(BLOCK_PATH, 'dir')
+            error('block path %s not found', BLOCK_PATH)
+        end
+        warning('no TSQ file found, attempting to read SEV files')
+        data = SEV2mat(BLOCK_PATH, varargin{:});
+        return
     elseif length(tsqList) > 1
         error('multiple TSQ files found')
     end
@@ -177,14 +198,13 @@ if ~doHeadersOnly
     end
 end
 
-% look for notes
+% look for epoch tagged notes
 tntPath = strrep(headerStruct.tevPath, '.tev', '.tnt');
 noteStr = {};
 try
     tnt = fopen(tntPath, 'rt');
     % get file version in first line
     fgetl(tnt);
-    noteStr = {};
     ind = 1;
     while ~feof(tnt)
         noteStr{ind} = fgetl(tnt);
@@ -246,7 +266,7 @@ if ismember(3, TYPE) && ~strcmp(SORTNAME, 'TankSort')
         customSortEvent = sortIDs.event{loc};
         fid = fopen(sortIDs.fileNames{loc}, 'rb');
         customSortChannelMap = fread(fid, 1024);
-        customSortCodes = fread(fid, Inf, '*char');
+        customSortCodes = uint16(fread(fid, Inf, '*char'));
         fclose(fid);
     end
 end
@@ -273,6 +293,7 @@ blockNotes = parseTBK(tbkPath);
 
 if ~useOutsideHeaders
     % read start time
+    file_size = fread(tsq, 1, '*int64');
     fseek(tsq, 48, 'bof');
     code1 = fread(tsq, 1, '*int32');
     assert(code1 == EVMARK_STARTBLOCK, 'Block start marker not found');
@@ -314,6 +335,67 @@ if headerStruct.stopTime > 0
 end
 data.info.streamChannel = CHANNEL;
 data.info.snipChannel = CHANNEL;
+
+% look for Synapse recording notes
+notesTxtPath = [BLOCK_PATH 'Notes.txt'];
+noteTxtLines = {};
+try
+    txt = fopen(notesTxtPath, 'rt');
+    ind = 1;
+    while ~feof(txt)
+        noteTxtLines{ind} = fgetl(txt);
+        ind = ind + 1;
+    end
+    fclose(txt);
+    fprintf('Found Synapse note file: %s\n', notesTxtPath);
+catch
+    %warning('Synapse Notes file could not be processed')
+end
+
+NoteText = {};
+if ~isempty(noteTxtLines)
+    targets = {'Experiment','Subject','User','Start','Stop'};
+    NoteText = cell(numel(noteTxtLines),1);
+    noteInd = 1;
+    for n = 1:numel(noteTxtLines)
+        noteLine = noteTxtLines{n};
+        if isempty(noteLine)
+            continue
+        end
+        bTargetFound = false;
+        for t = 1:length(targets)
+            testStr = [targets{t} ':'];
+            eee = length(testStr);
+            if length(noteLine) >= eee + 2
+                if strcmp(noteLine(1:eee), testStr)
+                    data.info.(targets{t}) = noteLine(eee+2:end);
+                    bTargetFound = true;
+                    break
+                end
+            end
+        end
+        if bTargetFound
+            continue
+        end
+
+        % look for actual notes
+        testStr = 'Note-';
+        eee = length(testStr);
+        if length(noteLine) >= eee + 2
+            if strcmp(noteLine(1:eee), testStr)
+                noteInd = str2double(noteLine(strfind(noteLine,'-')+1:strfind(noteLine,':')-1));
+                noteIdentifier = noteLine(strfind(noteLine, '[')+1:strfind(noteLine,']')-1);
+                if strcmp(noteIdentifier, 'none')
+                    quotes = strfind(noteLine, '"');
+                    NoteText{noteInd} = noteLine(quotes(1)+1:quotes(2)-1);
+                else
+                    NoteText{noteInd} = noteIdentifier;
+                end            
+            end
+        end
+    end
+    NoteText = NoteText(1:noteInd);
+end
 
 epocs = struct;
 epocs.name = {};
@@ -361,6 +443,14 @@ if ~useOutsideHeaders
         % check the codes first and build store maps and note arrays
         codes = heads(3,:);
         
+        goodCodes = codes > 0;
+        badCodes = ~goodCodes;
+        if sum(badCodes) > 0
+            warning('bad TSQ headers were written, removing %d, keeping %d headers', sum(badCodes), sum(goodCodes))
+            heads = heads(:, goodCodes);
+            codes = heads(3,:);
+        end
+        
         % find unique stores and a pointed to one of their headers
         sortedCodes = sort(codes);
         uniqueCodes = sortedCodes([true,diff(sortedCodes)>0]);
@@ -374,6 +464,7 @@ if ~useOutsideHeaders
         uniqueCodes = uniqueCodes(y);
         
         storeTypes = cell(1, numel(uniqueCodes));
+        ucf = cell(1, numel(uniqueCodes));
         goodStoreCodes = [];
         for x = 1:numel(uniqueCodes)
             if uniqueCodes(x) == EVMARK_STARTBLOCK || uniqueCodes(x) == EVMARK_STOPBLOCK
@@ -387,10 +478,33 @@ if ~useOutsideHeaders
             name = char(typecast(uniqueCodes(x), 'uint8'));
             
             % if looking for a particular store and this isn't it, skip it
-            if ~strcmp(STORE, '') && ~strcmp(STORE, name), continue; end
+            if iscell(STORE)
+                if all(~strcmp(STORE, name)), continue; end
+            else
+                if ~strcmp(STORE, '') && ~strcmp(STORE, name), continue; end
+            end
+            
+            bSkipDisabled = 0;
+            if ~isempty(fields(blockNotes))
+                for i = 1:numel(blockNotes)
+                    temp = blockNotes(i);
+                    if strcmp(temp.StoreName, name)
+                        if strcmp(temp.Enabled, '2')
+                            %disp([temp.StoreName ' STORE DISABLED'])
+                            bSkipDisabled = 1;
+                            break;
+                        end
+                    end
+                end
+            end
+            
+            if bSkipDisabled
+                continue
+            end
             
             varName = fixVarName(name);
             storeTypes{x} = code2type(heads(2,sortedCodes(x)));
+            ucf{x} = checkUCF(heads(2,sortedCodes(x)));
             
             % do store type filter here
             bUseStore = false;
@@ -436,6 +550,9 @@ if ~useOutsideHeaders
                     headerStruct.stores.(varName).type = heads(2,sortedCodes(x));
                     headerStruct.stores.(varName).typeStr = storeTypes{x};
                     headerStruct.stores.(varName).typeNum = find(strcmpi(ALLOWED_TYPES, storeTypes{x}));
+                    if strcmp(storeTypes{x}, 'streams')
+                        headerStruct.stores.(varName).ucf = ucf{x};
+                    end
                     if ~strcmp(storeTypes{x}, 'scalars')
                         headerStruct.stores.(varName).fs = double(typecast(heads(10,sortedCodes(x)), 'single'));
                     end
@@ -504,8 +621,8 @@ if ~useOutsideHeaders
         if T2 > 0 && lastTS > T2
             break
         end
-        fprintf('read up to t=%.2fs\n', lastTS);
     end
+    fprintf('read up to t=%.2fs\n', lastTS);
     
     % put epocs into headerStruct
     for ii = 1:numel(epocs.name)
@@ -531,9 +648,23 @@ if ~useOutsideHeaders
             varName = fixVarName(epocs.buddies{ii});
             headerStruct.stores.(varName).offset = epocs.ts{ii};
             
+            % handle odd case where there is a single offset event and no 
+            % onset events
+            if ~isfield(headerStruct.stores.(varName), 'onset')
+                headerStruct.stores.(varName).name = epocs.buddies{ii};
+                headerStruct.stores.(varName).onset = 0;
+                headerStruct.stores.(varName).typeStr = 'epocs';
+                headerStruct.stores.(varName).typeNum = 2;
+                headerStruct.stores.(varName).type = 'onset';
+                headerStruct.stores.(varName).data = 0;
+                headerStruct.stores.(varName).dform = 4;
+                headerStruct.stores.(varName).size = 10;
+            end
+            
             % fix time ranges
             if headerStruct.stores.(varName).offset(1) < headerStruct.stores.(varName).onset(1)
                 headerStruct.stores.(varName).onset = [0 headerStruct.stores.(varName).onset];
+                headerStruct.stores.(varName).data = [headerStruct.stores.(varName).data(1) headerStruct.stores.(varName).data];
             end
             if headerStruct.stores.(varName).onset(end) > headerStruct.stores.(varName).offset(end)
                 headerStruct.stores.(varName).offset = [headerStruct.stores.(varName).offset Inf];
@@ -600,7 +731,7 @@ if ~isempty(RANGES)
 end
 numRanges = size(validTimeRange, 2);
 if numRanges > 0
-    data.time_ranges = RANGES;
+    data.time_ranges = validTimeRange;
 end
 
 % do full time filter here
@@ -676,12 +807,15 @@ for ii = 1:numel(storeNames)
             stop = validTimeRange(2,jj);
             filterInd{jj} = find(headerStruct.stores.(varName).onset >= start & headerStruct.stores.(varName).onset < stop);
         end
+        
         filterInd = [filterInd{:}];
         if ~isempty(filterInd)
             headerStruct.stores.(varName).onset = headerStruct.stores.(varName).onset(filterInd);
             headerStruct.stores.(varName).data = headerStruct.stores.(varName).data(filterInd);
             headerStruct.stores.(varName).offset = headerStruct.stores.(varName).offset(filterInd);
-            
+            if strcmp(varName, 'Note')
+                headerStruct.stores.(varName).notes = NoteText(filterInd);
+            end
             % fix time ranges
             if headerStruct.stores.(varName).offset(1) < headerStruct.stores.(varName).onset(1)
                 if headerStruct.stores.(varName).onset(1) > firstStart
@@ -690,6 +824,14 @@ for ii = 1:numel(storeNames)
             end
             if headerStruct.stores.(varName).offset(end) > lastStop
                 headerStruct.stores.(varName).offset(end) = lastStop;
+            end
+        else
+            % default case is no valid events for this store
+            headerStruct.stores.(varName).onset = [];
+            headerStruct.stores.(varName).data = [];
+            headerStruct.stores.(varName).offset = [];
+            if strcmp(varName, 'Note')
+                headerStruct.stores.(varName).notes = {};
             end
         end
     end
@@ -746,7 +888,7 @@ for ii = 1:numel(storeNames)
         headerStruct.stores.(currentName).data = headerStruct.stores.(currentName).data';
         headerStruct.stores.(currentName).onset = headerStruct.stores.(currentName).onset';
         headerStruct.stores.(currentName).offset = headerStruct.stores.(currentName).offset';
-        if isfield(headerStruct.stores.(currentName), 'notes')
+        if isfield(headerStruct.stores.(currentName), 'notes') && ~strcmp(currentName, 'Note')
             headerStruct.stores.(currentName).notes.notes = headerStruct.stores.(currentName).notes.notes';
             headerStruct.stores.(currentName).notes.index = headerStruct.stores.(currentName).notes.index';
             headerStruct.stores.(currentName).notes.ts = headerStruct.stores.(currentName).notes.ts';
@@ -756,11 +898,20 @@ for ii = 1:numel(storeNames)
         if nchan > 1
             % organize data by sample
             ind = cell(1,nchan);
+            min_lengths = inf(1, nchan);
             for xx = 1:nchan
                 ind{xx} = find(headerStruct.stores.(currentName).chan == xx);
+                min_lengths(xx) = min(min_lengths(xx), size(ind{xx}, 2));
+            end
+            if numel(unique(min_lengths)) > 1
+                warning('truncating store %s to %d values (from %d)', currentName, min(min_lengths), max(min_lengths));
+                ml = min(min_lengths);
+                for xx = 1:nchan
+                    ind{xx} = ind{xx}(:,1:ml);
+                end
             end
             if ~NODATA
-                headerStruct.stores.(currentName).data = reshape(headerStruct.stores.(currentName).data([ind{:}]), nchan, []);
+                headerStruct.stores.(currentName).data = reshape(headerStruct.stores.(currentName).data([ind{:}]), [], nchan)';
             end
             
             % only use timestamps from first channel
@@ -769,7 +920,7 @@ for ii = 1:numel(storeNames)
             % remove channels field
             headerStruct.stores.(currentName) = rmfield(headerStruct.stores.(currentName),'chan');
         end
-        if isfield(headerStruct.stores.(currentName), 'notes')
+        if isfield(headerStruct.stores.(currentName), 'notes') && ~strcmp(currentName, 'Note')
             headerStruct.stores.(currentName).notes.notes = headerStruct.stores.(currentName).notes.notes';
             headerStruct.stores.(currentName).notes.index = headerStruct.stores.(currentName).notes.index';
             headerStruct.stores.(currentName).notes.ts = headerStruct.stores.(currentName).notes.ts';
@@ -903,9 +1054,9 @@ for ii = 1:numel(storeNames)
                 end
             end
             if CHANNEL == 0
-                d = SEV2mat(BLOCK_PATH, 'EVENTNAME', currentName, 'VERBOSE', 0, 'RANGES', validTimeRange);
+                d = SEV2mat(BLOCK_PATH, 'EVENTNAME', currentName, 'VERBOSE', 0, 'RANGES', validTimeRange, 'FS', expectedFS);
             else
-                d = SEV2mat(BLOCK_PATH, 'EVENTNAME', currentName, 'CHANNEL', CHANNEL, 'VERBOSE', 0, 'RANGES', validTimeRange);
+                d = SEV2mat(BLOCK_PATH, 'EVENTNAME', currentName, 'CHANNEL', CHANNEL, 'VERBOSE', 0, 'RANGES', validTimeRange, 'FS', expectedFS);
             end
             detectedFS = d.(currentName).fs;
             if expectedFS > 0 && (abs(expectedFS - detectedFS) > 1)
@@ -916,15 +1067,25 @@ for ii = 1:numel(storeNames)
             headerStruct.stores.(currentName) = d.(currentName);
             headerStruct.stores.(currentName).startTime = 0;
         else
+            % make sure SEV files are there if they are supposed to be
+            if headerStruct.stores.(currentName).ucf == 1
+                warning('Expecting SEV files for %s but none were found, skipping...', currentName)
+                continue
+            end
             headerStruct.stores.(currentName).data = cell(1,numRanges);
             for jj = 1:numRanges
                 fc = headerStruct.stores.(currentName).filteredChan{jj};
                 if CHANNEL > 0
-                    validInd = fc == CHANNEL;
-                    if ~any(validInd)
-                        error('Channel %d not found in store %s', CHANNEL, currentName);
+                    if all(headerStruct.stores.(currentName).filteredChan{jj} == 1)
+                        % there is only one channel here, use them all
+                        validInd = 1:numel(headerStruct.stores.(currentName).filteredData{jj});
+                    else
+                        validInd = fc == CHANNEL;
+                        if ~any(validInd)
+                            error('Channel %d not found in store %s', CHANNEL, currentName);
+                        end
+                        headerStruct.stores.(currentName).filteredChan{jj} = fc(validInd);    
                     end
-                    headerStruct.stores.(currentName).filteredChan{jj} = fc(validInd);
                     nchan = 1;
                     chanIndex = 1;
                 else
@@ -1036,6 +1197,15 @@ for ii = 1:numel(storeNames)
     data.(currentTypeStr).(currentName) = headerStruct.stores.(currentName);
 end
 
+if ~isempty(COMBINE)
+    for ii = 1:numel(COMBINE)
+        if ~isfield(data.snips, COMBINE{ii})
+            error(['Specified COMBINE store name ' COMBINE{ii} ' is not in snips']);
+        end
+        data.snips.(COMBINE{ii}) = snip_maker(data.snips.(COMBINE{ii}));
+    end
+end
+    
 if ~strcmp(BITWISE , '')
     if ~(isfield(data.epocs, BITWISE) || isfield(data.scalars, BITWISE))
         error(['Specified BITWISE store name ' BITWISE ' is not in epocs or scalars']);
@@ -1147,6 +1317,12 @@ else
 end
 end
 
+function s = checkUCF(code)
+    %% given event code, return string 'epocs', 'snips', 'streams', or 'scalars'
+    global EVTYPE_UCF
+    s = bitand(code, EVTYPE_UCF) == EVTYPE_UCF;
+end
+
 function varname = fixVarName(name, varargin)
 if nargin == 1
     VERBOSE = 0;
@@ -1189,7 +1365,8 @@ delimInd = strfind(s, '[USERNOTEDELIMITER]');
 try
     s = s(delimInd(2):delimInd(3));
 catch
-    error('Bad TBK file, try running the TankRestore tool to correct. See http://www.tdt.com/technotes/#0935.htm')
+    warning('Bad TBK file, try running the TankRestore tool to correct. See http://www.tdt.com/technotes/#0935.htm')
+    return;
 end
 lines = textscan(s, '%s', 'delimiter', sprintf('\n'));
 lines = lines{1};
@@ -1216,7 +1393,50 @@ for i = 1:length(lines)-1
 end
 
 % print out store information
-%for i = 1:storenum
-%    disp(blockNotes(i))
-%end
+% for i = 1:storenum
+%     temp = blockNotes(i);
+%     disp(temp.StoreName)
+%     if strcmp(temp.Enabled, '2')
+%         disp([temp.StoreName ' STORE DISABLED'])
+%     end
+% end
+end
+
+function data_snip = snip_maker(data_snip)
+% convert strobe-controlled data snips into larger chunks
+ts_diffs = diff(data_snip.ts); 
+ts_diffThresh = (size(data_snip.data,2)+1) / data_snip.fs;
+gap_points = find(ts_diffs > ts_diffThresh);
+gap_points = [gap_points; size(data_snip.data,1)];
+chunk_length = size(data_snip.data, 2);
+
+snip_store = cell(numel(gap_points), 1);
+snip_store_ts = zeros(numel(gap_points), 1);
+nchan = double(max(data_snip.chan));
+gp_index = 1;
+
+for ind = 1:numel(gap_points)
+    if nchan == 1
+        chan_index = 1:(gap_points(ind) - gp_index + 1);
+        snip_store{ind} = reshape(data_snip.data(gp_index + chan_index-1,:)', 1, []);
+    else
+        nchunks = floor((gap_points(ind) - gp_index + 1) / nchan);
+        chan_mat = zeros(nchan, nchunks * chunk_length);
+        for chan = 1:nchan
+            chan_index = find(data_snip.chan(gp_index:gap_points(ind)) == chan);
+            if length(chan_index) ~= nchunks
+                warning('Channel %d was shortened to %d chunks', chan, nchunks);
+            end
+            chan_index = chan_index(1:nchunks);
+            chan_mat(chan,:) = reshape(data_snip.data(gp_index + chan_index-1,:)', 1, []);
+        end
+        snip_store{ind} = chan_mat;
+    end
+    snip_store_ts(ind) = data_snip.ts(gp_index);
+    gp_index = gap_points(ind)+1;
+end
+
+data_snip.data = snip_store;
+data_snip.ts = snip_store_ts;
+data_snip.chan = (1:max(data_snip.chan))';
 end

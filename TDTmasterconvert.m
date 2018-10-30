@@ -1,5 +1,5 @@
 function TDTmasterconvert(metadata, tankfolder, savefolder,... 
-                            skipfiles, processfiles, nboxes)
+                            skipfiles, processfiles)
 % Initialize log file
 
 logfile = strcat(savefolder, 'conversion_log.txt');
@@ -63,6 +63,9 @@ try
     
     msg = sprintf('Input file detected with %d columns and %d rows.', ncols, nrows)
     append2log(logfile, msg);
+    
+    tdtfile_index = strfind(header, 'tdtfile');
+    tdtfile_col = find(not(cellfun('isempty', tdtfile_index)));
 
     rat_index = strfind(header, 'rat');
     rat_col = find(not(cellfun('isempty', rat_index)));
@@ -89,7 +92,7 @@ end
 for i = 1:size(C,1)
     if C{i,include_col} == 1 % checks to see if Row is to be included or not
 
-        TDTfile = char(strcat(tankfolder,C{i,1}));      
+        TDTfile = char(strcat(tankfolder,C{i,tdtfile_col}));      
         rat = strrep(char(C{i,rat_col}), '.', '-'); % Extracts rat and removes period
         
         if ischar(C{i,session_col}) == 1

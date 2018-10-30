@@ -30,13 +30,13 @@ An example metafile is included in the _tdt-convert_ folder named _example\_meta
 
 The metafile must have the following columns (spelled exactly as below):
 
-_tdtfile_ – name of the TDT tank, not the entire path
+* _tdtfile_ – name of the TDT tank, not the entire path
 
-_rat_ – named or ID of the rat, e.g. PPP1-1
+* _rat_ – name or ID of the rat, e.g. PPP1-1
 
-_session_ – name of the session, could be s1, s2 etc or lick1, lick2 etc
+* _session_ – name of the session, could be s1, s2 etc or lick1, lick2 etc
 
-_include-mat_ – 0 or 1 depending on if a file is to be included or not
+* _include-mat_ – 0 or 1 depending on if a file is to be included or not
 
 In addition, there should be two columns for with the names of the stored streamed signals from Synapse named &#39;_sig-blue_&#39; and &#39;_sig-uv_&#39; and columns for any TTLs that you need to extract from Synapse which should be start with the prefix &#39;_ttl-_&#39;, e.g. _ttl-lick_ or _ttl-sipper_.
 
@@ -50,19 +50,19 @@ After the header is set up, data can be added to the columns. Entries for the si
 
 This is the main Matlab script that you will run for each project and should be the only thing that needs creating/editing. There is an example version in the _tdt-convert_ repository (named _template\_convert.m_).
 
-_folder_ – This should be the master folder, often kept on the R drive, although it could be a local folder on a hard drive or USB stick. It should include the following subfolders:
+* _folder_ – This should be the master folder, often kept on the R drive, although it could be a local folder on a hard drive or USB stick. It should include the following subfolders:
 
-_tdtfiles_ – this folder is where you should put all the tanks that will be read and processed
+* _tdtfiles_ – this folder is where you should put all the tanks that will be read and processed
 
-_matfiles –_ you need to create this empty folde, which is the location where the .mat filses that are produced will be saved.
+* _matfiles –_ you need to create this empty folde, which is the location where the .mat filses that are produced will be saved.
 
-_skipfiles_ – default is 1, which will result in the script skipping over files that have already been converted
+* _skipfiles_ – default is 1, which will result in the script skipping over files that have already been converted
 
-_processfiles_ – this setting can be ignored at present.
+* _processfiles_ – this setting can be ignored at present.
 
-_xlfile –_ name of Excel file that contains metafile sheet. Needs to be in _folder._
+* _xlfile –_ name of Excel file that contains metafile sheet. Needs to be in _folder._
 
-_sheet_ – name of sheet in _xlfile_ with metafile data.
+* _sheet_ – name of sheet in _xlfile_ with metafile data.
 
 
 For help with these scripts please contact Jaime McCutcheon (jem64@le.ac.uk).

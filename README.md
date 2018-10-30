@@ -1,6 +1,6 @@
-TDT-convert instructions
+# TDT-convert instructions
 
-Quick start
+## Quick start
 
 NB: the changes to the .m file described below can be done on any computer whether or not it has Matlab installed. You can open the .m file in any text editor (e.g. Notepad) and make the changes. If you have Matlab installed and want to edit from within Matlab&#39;s editor you can do this my typing _edit myproject\_convert_ at a Matlab prompt but the folder has to be on Matlab&#39;s path (see step 7 below).
 
@@ -22,13 +22,11 @@ NB: the changes to the .m file described below can be done on any computer wheth
 
 9. Check log file (_conversion\_log.txt_) in the _matfiles_ folder to see if any files failed the conversion process.
 
-More information and detailed instructions
+## More information and detailed instructions
 
-Make metafile in Excel file
+### Make metafile in Excel file
 
 An example metafile is included in the _tdt-convert_ folder named _example\_metafile.xlsx_. For your project this Excel file should be located in your master folder.
-
-Setting up column headers
 
 The metafile must have the following columns (spelled exactly as below):
 
@@ -48,7 +46,7 @@ As many additional columns as you want can be included, for example, you may nee
 
 After the header is set up, data can be added to the columns. Entries for the sig- and ttl- columns need to correspond to the names for streamed signals and TTLs that Synapse uses.
 
-Detail on the project-specific conversion script (e.g. _myproject\_covert.m_)
+### Detail on the project-specific conversion script (e.g. _myproject\_covert.m_)
 
 This is the main Matlab script that you will run for each project and should be the only thing that needs creating/editing. There is an example version in the _tdt-convert_ repository (named _template\_convert.m_).
 
@@ -66,10 +64,5 @@ _xlfile –_ name of Excel file that contains metafile sheet. Needs to be in _fo
 
 _sheet_ – name of sheet in _xlfile_ with metafile data.
 
-Running
 
-
-
-Make metafile
-
-Metafile should
+For help with these scripts please contact Jaime McCutcheon (jem64@le.ac.uk).

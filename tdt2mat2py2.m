@@ -15,12 +15,15 @@ fileinfo = strcat({'Rat '},rat,{': Session '}, session);
 data = TDTbin2mat(tank);
 
 %% Puts info into output file
-output.info = data.info
+output.info = data.info;
 
 % Assigns processed data to new variables for easier referencing
 output.blue = data.streams.(char(sigs{1})).data';
 output.uv = data.streams.(char(sigs{2})).data';
 output.fs = data.streams.(char(sigs{1})).fs;
+
+% To process signals - Comment out if no processing needed or wanted
+output = FPfftfilt(output);
     
 %% Gets TTLs
 % This short code ensures that illeagal characters, such as underscores,

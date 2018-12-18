@@ -111,6 +111,8 @@ for i = 1:size(C,1)
         try
             if skipfiles == 0
                 tdt2mat2py2(TDTfile,rat,session,sigs,ttls,savefilename);
+                msg = strcat('Rat ',rat,'_',session,' converted successfully (I think).')
+                append2log(logfile, msg);
             else
                 if exist(savefilename) == 0
                     tdt2mat2py2(TDTfile,rat,session,sigs,ttls,savefilename);

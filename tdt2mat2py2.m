@@ -12,12 +12,13 @@ function [output] = tdt2mat2py2(tank, rat, session, sigs, ttls, savefilename)
 %% Extracts photometry data and fits signal FROM MULTIPLE BOXES (if there are multiple)
 % Reads in TDT data into structured array using TDT function
 fileinfo = strcat({'Rat '},rat,{': Session '}, session);
-data = TDTbin2mat(tank);
+% data = TDTbin2mat(tank);
 
 %% Puts info into output file
-output.info = data.info;
+% output.info = data.info;
 
 % Assigns processed data to new variables for easier referencing
+tmp = TDTbin2mat(tank, )
 output.blue = data.streams.(char(sigs{1})).data';
 output.uv = data.streams.(char(sigs{2})).data';
 output.fs = data.streams.(char(sigs{1})).fs;

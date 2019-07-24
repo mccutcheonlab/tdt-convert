@@ -31,8 +31,8 @@ output = FPfftfilt(output);
 % This short code ensures that illeagal characters, such as underscores,
 % aren't included
 
-epocs = TDTbin2mat(tank, 'TYPE', {'epocs'})
-scalars = TDTbin2mat(tank, 'TYPE', {'scalars'})
+epocs = TDTbin2mat(tank, 'TYPE', {'epocs'});
+scalars = TDTbin2mat(tank, 'TYPE', {'scalars'});
 
 try
     output.tick = epocs.epocs.Tick.onset;

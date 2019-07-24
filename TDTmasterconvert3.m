@@ -106,7 +106,7 @@ for i = 1:size(C,1)
             ttls{x} = C{i,ttl_cols(x)};
         end
         
-        savefilename = char(strcat(savefolder,rat,'_',session,'.mat'))
+        savefilename = char(strcat(savefolder,rat,'_',session,'.mat'));
 
         try
             if skipfiles == 0
